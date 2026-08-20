@@ -1,0 +1,64 @@
+services:
+
+  mrbs:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    container_name: mrbs18
+    restart: unless-stopped
+
+    environment:
+      WEB_DOCUMENT_ROOT: /web
+      WEB_DOCUMENT_INDEX: index.php
+
+    ports:
+      - "8081:80"
+
+    volumes:
+      - ./web:/web
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+    working_dir: /web
+
+  db:
+    image: mysql:5.6
+    container_name: mrbs18-db
+    restart: unless-stopped
+
+    environment:
+      MYSQL_DATABASE: mrbsic_prod
+      MYSQL_USER: mrbsic_prod
+      MYSQL_PASSWORD: mrbsic_prod
+      MYSQL_ROOT_PASSWORD: root-mrbs
+
+    volumes:
+      - mrbs18_db_data:/var/lib/mysql
+      - ./tables.my.sql:/docker-entrypoint-initdb.d/01-tables.my.sql:ro
+
+    ports:
+      - "3308:3306"
+
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-u",
+          "root",
+          "-proot-mrbs"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+volumes:
+
+  mrbs18_db_data:
